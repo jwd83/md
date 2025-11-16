@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background: #2d2d2d;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3e3e3e;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar button {
+            background: #3e3e3e;
+            color: #d4d4d4;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .toolbar button:hover {
+            background: #4e4e4e;
+            border-color: #666;
+        }
+
+        .toolbar button:active {
+            background: #2e2e2e;
+        }
+
+        .tabs-container {
+            background: #2d2d2d;
+            border-bottom: 1px solid #3e3e3e;
+            display: flex;
+            overflow-x: auto;
+            min-height: 40px;
+        }
+
+        .tab {
+            background: #2d2d2d;
+            color: #888;
+            border: none;
+            border-right: 1px solid #3e3e3e;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .tab:hover {
+            background: #333;
+            color: #d4d4d4;
+        }
+
+        .tab.active {
+            background: #1e1e1e;
+            color: #fff;
+            border-bottom: 2px solid #007acc;
+        }
+
+        .tab-close {
+            color: #888;
+            font-size: 16px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+
+        .tab-close:hover {
+            color: #ff6b6b;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-panel, .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-panel {
+            border-right: 1px solid #3e3e3e;
+        }
+
+        .panel-header {
+            background: #252525;
+            padding: 8px 15px;
+            border-bottom: 1px solid #3e3e3e;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+        }
+
+        .CodeMirror {
+            height: 100% !important;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .preview-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1e1e1e;
+        }
+
+        .preview-content h1, .preview-content h2, .preview-content h3,
+        .preview-content h4, .preview-content h5, .preview-content h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #fff;
+        }
+
+        .preview-content h1 { font-size: 2em; border-bottom: 1px solid #3e3e3e; padding-bottom: 8px; }
+        .preview-content h2 { font-size: 1.5em; border-bottom: 1px solid #3e3e3e; padding-bottom: 6px; }
+        .preview-content h3 { font-size: 1.25em; }
+        .preview-content h4 { font-size: 1em; }
+        .preview-content h5 { font-size: 0.875em; }
+        .preview-content h6 { font-size: 0.85em; color: #888; }
+
+        .preview-content p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .preview-content code {
+            background: #2d2d2d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            color: #f08d49;
+        }
+
+        .preview-content pre {
+            background: #2d2d2d;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        .preview-content pre code {
+            background: none;
+            padding: 0;
+            color: #d4d4d4;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid #007acc;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #888;
+        }
+
+        .preview-content ul, .preview-content ol {
+            margin-bottom: 16px;
+            padding-left: 32px;
+        }
+
+        .preview-content li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .preview-content a {
+            color: #3794ff;
+            text-decoration: none;
+        }
+
+        .preview-content a:hover {
+            text-decoration: underline;
+        }
+
+        .preview-content hr {
+            border: none;
+            border-top: 1px solid #3e3e3e;
+            margin: 24px 0;
+        }
+
+        .preview-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .preview-content table th,
+        .preview-content table td {
+            border: 1px solid #3e3e3e;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .preview-content table th {
+            background: #2d2d2d;
+            font-weight: 600;
+        }
+
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3e3e3e;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e4e;
+        }
+
+        .toggle-preview {
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="newFile">New File</button>
+        <button id="loadFile">Load File</button>
+        <button id="saveFile">Save File</button>
+        <button id="togglePreview" class="toggle-preview">Toggle Preview</button>
+    </div>
+
+    <div class="tabs-container" id="tabsContainer">
+    </div>
+
+    <div class="main-content">
+        <div class="editor-panel" id="editorPanel">
+            <div class="panel-header">Editor</div>
+            <textarea id="editor"></textarea>
+        </div>
+        <div class="preview-panel" id="previewPanel">
+            <div class="panel-header">Preview</div>
+            <div class="preview-content" id="previewContent"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    <script>
+        // App state
+        let tabs = [];
+        let activeTabIndex = -1;
+        let editor;
+        let tabCounter = 0;
+        let previewVisible = true;
+
+        // Initialize CodeMirror
+        editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+            mode: 'markdown',
+            theme: 'monokai',
+            lineNumbers: true,
+            lineWrapping: true,
+            autofocus: true
+        });
+
+        editor.on('change', () => {
+            if (activeTabIndex >= 0) {
+                tabs[activeTabIndex].content = editor.getValue();
+                tabs[activeTabIndex].modified = true;
+                updatePreview();
+                renderTabs();
+            }
+        });
+
+        // Create new tab
+        function createTab(name = null, content = '', filePath = null) {
+            const tab = {
+                id: ++tabCounter,
+                name: name || `Untitled-${tabCounter}`,
+                content: content,
+                filePath: filePath,
+                modified: false
+            };
+            tabs.push(tab);
+            switchToTab(tabs.length - 1);
+            renderTabs();
+            return tab;
+        }
+
+        // Switch to a specific tab
+        function switchToTab(index) {
+            if (index >= 0 && index < tabs.length) {
+                activeTabIndex = index;
+                editor.setValue(tabs[index].content);
+                editor.refresh();
+                updatePreview();
+                renderTabs();
+            }
+        }
+
+        // Close tab
+        function closeTab(index) {
+            if (tabs[index].modified) {
+                if (!confirm(`${tabs[index].name} has unsaved changes. Close anyway?`)) {
+                    return;
+                }
+            }
+            
+            tabs.splice(index, 1);
+            
+            if (tabs.length === 0) {
+                createTab();
+            } else if (index <= activeTabIndex) {
+                activeTabIndex = Math.max(0, activeTabIndex - 1);
+                switchToTab(activeTabIndex);
+            }
+            
+            renderTabs();
+        }
+
+        // Render tabs
+        function renderTabs() {
+            const container = document.getElementById('tabsContainer');
+            container.innerHTML = '';
+            
+            tabs.forEach((tab, index) => {
+                const tabEl = document.createElement('div');
+                tabEl.className = 'tab' + (index === activeTabIndex ? ' active' : '');
+                
+                const tabName = document.createElement('span');
+                tabName.textContent = tab.name + (tab.modified ? ' •' : '');
+                tabName.onclick = () => switchToTab(index);
+                
+                const closeBtn = document.createElement('span');
+                closeBtn.className = 'tab-close';
+                closeBtn.textContent = '×';
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closeTab(index);
+                };
+                
+                tabEl.appendChild(tabName);
+                tabEl.appendChild(closeBtn);
+                container.appendChild(tabEl);
+            });
+        }
+
+        // Update preview
+        function updatePreview() {
+            const previewContent = document.getElementById('previewContent');
+            const markdown = editor.getValue();
+            previewContent.innerHTML = marked.parse(markdown);
+        }
+
+        // New file
+        document.getElementById('newFile').addEventListener('click', () => {
+            createTab();
+        });
+
+        // Load file
+        document.getElementById('loadFile').addEventListener('click', async () => {
+            try {
+                const [fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'Markdown Files',
+                        accept: { 'text/markdown': ['.md', '.markdown'] }
+                    }]
+                });
+                
+                const file = await fileHandle.getFile();
+                const content = await file.text();
+                const tab = createTab(file.name, content, fileHandle);
+                tab.modified = false;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Error loading file:', err);
+                    alert('Error loading file. Your browser may not support the File System Access API.');
+                }
+            }
+        });
+
+        // Save file
+        document.getElementById('saveFile').addEventListener('click', async () => {
+            if (activeTabIndex < 0) return;
+            
+            const tab = tabs[activeTabIndex];
+            
+            try {
+                let fileHandle = tab.filePath;
+                
+                if (!fileHandle) {
+                    fileHandle = await window.showSaveFilePicker({
+                        suggestedName: tab.name.endsWith('.md') ? tab.name : `${tab.name}.md`,
+                        types: [{
+                            description: 'Markdown Files',
+                            accept: { 'text/markdown': ['.md', '.markdown'] }
+                        }]
+                    });
+                    tab.filePath = fileHandle;
+                }
+                
+                const writable = await fileHandle.createWritable();
+                await writable.write(tab.content);
+                await writable.close();
+                
+                const file = await fileHandle.getFile();
+                tab.name = file.name;
+                tab.modified = false;
+                renderTabs();
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Error saving file:', err);
+                    alert('Error saving file. Your browser may not support the File System Access API.');
+                }
+            }
+        });
+
+        // Toggle preview
+        document.getElementById('togglePreview').addEventListener('click', () => {
+            previewVisible = !previewVisible;
+            const previewPanel = document.getElementById('previewPanel');
+            const editorPanel = document.getElementById('editorPanel');
+            
+            if (previewVisible) {
+                previewPanel.style.display = 'flex';
+                editorPanel.style.borderRight = '1px solid #3e3e3e';
+            } else {
+                previewPanel.style.display = 'none';
+                editorPanel.style.borderRight = 'none';
+            }
+            
+            editor.refresh();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + S to save
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('saveFile').click();
+            }
+            // Ctrl/Cmd + N to create new file
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                document.getElementById('newFile').click();
+            }
+            // Ctrl/Cmd + O to open file
+            if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                e.preventDefault();
+                document.getElementById('loadFile').click();
+            }
+        });
+
+        // Initialize with one empty tab
+        createTab();
+    </script>
+</body>
+</html>
