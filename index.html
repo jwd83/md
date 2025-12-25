@@ -301,6 +301,7 @@
         let editor;
         let tabCounter = 0;
         let previewVisible = true;
+        let isUrlUpdate = false;
 
         // Initialize CodeMirror
         editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
@@ -312,13 +313,78 @@
         });
 
         editor.on('change', () => {
-            if (activeTabIndex >= 0) {
+            if (activeTabIndex >= 0 && !isUrlUpdate) {
                 tabs[activeTabIndex].content = editor.getValue();
                 tabs[activeTabIndex].modified = true;
                 updatePreview();
                 renderTabs();
+                updateUrl();
             }
         });
+
+        // URL encoding/decoding functions
+        async function compress(string) {
+            const byteArray = new TextEncoder().encode(string);
+            const stream = new CompressionStream('deflate-raw');
+            const writer = stream.writable.getWriter();
+            writer.write(byteArray);
+            writer.close();
+            const buffer = await new Response(stream.readable).arrayBuffer();
+            return new Uint8Array(buffer).toBase64().replace(/\+/g, "-").replace(/\//g, "_");
+        }
+
+        async function decompress(b64) {
+            const byteArray = Uint8Array.fromBase64(b64.replace(/-/g, "+").replace(/_/g, "/"));
+            const stream = new DecompressionStream('deflate-raw');
+            const writer = stream.writable.getWriter();
+            writer.write(byteArray);
+            writer.close();
+            const buffer = await new Response(stream.readable).arrayBuffer();
+            return new TextDecoder().decode(buffer);
+        }
+
+        // Update URL with current content
+        async function updateUrl() {
+            if (activeTabIndex >= 0) {
+                const content = tabs[activeTabIndex].content;
+                const hash = '#' + await compress(content);
+                if (location.hash !== hash) {
+                    history.replaceState({}, '', hash);
+                }
+            }
+        }
+
+        // Load content from URL
+        async function loadFromUrl() {
+            if (location.hash !== '') {
+                try {
+                    isUrlUpdate = true;
+                    const content = await decompress(location.hash.slice(1));
+                    if (tabs.length > 0) {
+                        tabs[activeTabIndex].content = content;
+                        tabs[activeTabIndex].modified = false;
+                        editor.setValue(content);
+                    } else {
+                        createTab('Untitled-1', content);
+                    }
+                    updatePreview();
+                    renderTabs();
+                } catch (e) {
+                    console.error('Error loading from URL:', e);
+                } finally {
+                    isUrlUpdate = false;
+                }
+            }
+        }
+
+        // Listen for URL changes
+        addEventListener('DOMContentLoaded', loadFromUrl);
+        addEventListener('hashchange', loadFromUrl);
+
+        // Initialize: only create blank tab if no URL hash
+        if (location.hash === '') {
+            createTab();
+        }
 
         // Create new tab
         function createTab(name = null, content = '', filePath = null) {
@@ -343,6 +409,7 @@
                 editor.refresh();
                 updatePreview();
                 renderTabs();
+                updateUrl();
             }
         }
 
@@ -498,9 +565,6 @@
                 document.getElementById('loadFile').click();
             }
         });
-
-        // Initialize with one empty tab
-        createTab();
     </script>
 </body>
 </html>
