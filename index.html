@@ -308,9 +308,10 @@
 </head>
 <body>
     <div class="toolbar">
-        <button id="newFile">New File</button>
-        <button id="loadFile">Load File</button>
-        <button id="saveFile">Save File</button>
+        <button id="newFile">📄 New File</button>
+        <button id="loadFile">📂 Load File</button>
+        <button id="saveFile">💾 Save File</button>
+        <button id="copyLink">🔗 Copy Link</button>
         <div class="font-selector">
             <label for="fontSelect">Font:</label>
             <select id="fontSelect">
@@ -321,7 +322,7 @@
                 <a href="https://blog.glyphdrawing.club/font-with-built-in-syntax-highlighting/" target="_blank" rel="noopener">Font info</a>
             </span>
         </div>
-        <button id="togglePreview" class="toggle-preview">Toggle Preview</button>
+        <button id="togglePreview" class="toggle-preview">👁️ Toggle Preview</button>
     </div>
 
     <div class="tabs-container" id="tabsContainer">
@@ -544,12 +545,12 @@
         // Save file
         document.getElementById('saveFile').addEventListener('click', async () => {
             if (activeTabIndex < 0) return;
-            
+
             const tab = tabs[activeTabIndex];
-            
+
             try {
                 let fileHandle = tab.filePath;
-                
+
                 if (!fileHandle) {
                     fileHandle = await window.showSaveFilePicker({
                         suggestedName: tab.name.endsWith('.md') ? tab.name : `${tab.name}.md`,
@@ -560,11 +561,11 @@
                     });
                     tab.filePath = fileHandle;
                 }
-                
+
                 const writable = await fileHandle.createWritable();
                 await writable.write(tab.content);
                 await writable.close();
-                
+
                 const file = await fileHandle.getFile();
                 tab.name = file.name;
                 tab.modified = false;
@@ -574,6 +575,23 @@
                     console.error('Error saving file:', err);
                     alert('Error saving file. Your browser may not support the File System Access API.');
                 }
+            }
+        });
+
+        // Copy link
+        document.getElementById('copyLink').addEventListener('click', async () => {
+            const url = window.location.href;
+            try {
+                await navigator.clipboard.writeText(url);
+                const button = document.getElementById('copyLink');
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            } catch (err) {
+                console.error('Error copying to clipboard:', err);
+                alert('Error copying link to clipboard.');
             }
         });
 
