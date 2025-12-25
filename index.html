@@ -136,7 +136,7 @@
         .CodeMirror {
             height: 100% !important;
             font-size: 14px;
-            font-family: 'FontWithASyntaxHighlighter', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
         }
 
         .preview-content {
@@ -267,6 +267,43 @@
         .toggle-preview {
             margin-left: auto;
         }
+
+        .font-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .font-selector select {
+            background: #3e3e3e;
+            color: #d4d4d4;
+            border: 1px solid #555;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .font-selector select:hover {
+            background: #4e4e4e;
+            border-color: #666;
+        }
+
+        .font-attribution {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .font-attribution a {
+            color: #3794ff;
+            text-decoration: none;
+        }
+
+        .font-attribution a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -274,6 +311,16 @@
         <button id="newFile">New File</button>
         <button id="loadFile">Load File</button>
         <button id="saveFile">Save File</button>
+        <div class="font-selector">
+            <label for="fontSelect">Font:</label>
+            <select id="fontSelect">
+                <option value="monospace">Monospace</option>
+                <option value="syntax">Syntax Highlighter</option>
+            </select>
+            <span class="font-attribution" id="fontAttribution" style="display: none;">
+                <a href="https://blog.glyphdrawing.club/font-with-built-in-syntax-highlighting/" target="_blank" rel="noopener">Font info</a>
+            </span>
+        </div>
         <button id="togglePreview" class="toggle-preview">Toggle Preview</button>
     </div>
 
@@ -544,6 +591,19 @@
                 editorPanel.style.borderRight = 'none';
             }
             
+            editor.refresh();
+        });
+
+        // Font selector
+        const fontSelect = document.getElementById('fontSelect');
+        const fontAttribution = document.getElementById('fontAttribution');
+        const syntaxFont = "'FontWithASyntaxHighlighter', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace";
+        const defaultMonospace = "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace";
+
+        fontSelect.addEventListener('change', () => {
+            const selectedFont = fontSelect.value === 'syntax' ? syntaxFont : defaultMonospace;
+            document.querySelector('.CodeMirror').style.fontFamily = selectedFont;
+            fontAttribution.style.display = fontSelect.value === 'syntax' ? 'inline' : 'none';
             editor.refresh();
         });
 
